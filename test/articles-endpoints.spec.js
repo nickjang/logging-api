@@ -169,16 +169,11 @@ describe('Articles Endpoints', function () {
     context('Given an XSS attack article', () => {
       const { maliciousArticle, expectedArticle } = makeMaliciousArticle();
 
-      beforeEach('insert malicious article', () => {
-        return db
-          .into('blogful_articles')
-          .insert([maliciousArticle]);
-      });
-
       it('removes XSS attack content', () => {
         return supertest(app)
-          .get(`/articles/${maliciousArticle.id}`)
-          .expect(200)
+          .post('/articles')
+          .send(maliciousArticle)
+          .expect(201)
           .expect(res => {
             expect(res.body.title).to.eql(expectedArticle.title);
             expect(res.body.content).to.eql(expectedArticle.content);
