@@ -1,5 +1,7 @@
 module.exports = {
   PORT: process.env.PORT || 8000,
   NODE_ENV: process.env.NODE_ENV || 'development',
-  DB_URL: process.env.DB_URL || 'postgresql://dunder_mifflin@localhost/blogful',
+  DATABASE_URL: process.env.DATABASE_URL || 'postgresql://logging_admin@localhost/logging',
+  TEST_DATABASE_URL: process.env.TEST_DATABASE_URL || 'postgresql://loggin_admin@localhost/logging-test',
+  CLIENT_ORIGIN: 'https://logging.com'
 };
