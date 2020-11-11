@@ -2,6 +2,7 @@ const path = require('path');
 const express = require('express');
 const xss = require('xss');
 const ArticlesService = require('./articles-service');
+const logger = require('../logger.js');
 
 const articlesRouter = express.Router();
 const jsonParser = express.json();
@@ -30,10 +31,12 @@ articlesRouter
     const newArticle = { title, content, style };
 
     for (const [key, value] of Object.entries(newArticle))
-      if (value == null)
+      if (value == null) {
+        logger.error(`Missing '${key}' in request body`);
         return res.status(400).json({
           error: { message: `Missing '${key}' in request body` }
         });
+      }
     newArticle.author = author;
     ArticlesService.insertArticle(
       req.app.get('db'),
