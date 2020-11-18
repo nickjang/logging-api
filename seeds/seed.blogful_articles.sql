@@ -1,4 +1,4 @@
-INSERT INTO blogful_articles (title, style, content)
+INSERT INTO blogful_projects (title, style, content)
 VALUES
   ('First post!', 'Interview',
     'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Natus consequuntur deserunt commodi, nobis qui inventore corrupti iusto aliquid debitis unde non. Adipisci, pariatur. Molestiae, libero esse hic adipisci autem neque?'),

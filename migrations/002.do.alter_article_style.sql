@@ -1,11 +1,11 @@
-CREATE TYPE article_category AS ENUM (
-    'Listicle',
-    'How-to',
-    'News',
-    'Interview',
-    'Story'
+CREATE TYPE project_category AS ENUM (
+  'Listicle',
+  'How-to',
+  'News',
+  'Interview',
+  'Story'
 );
 
-ALTER TABLE blogful_articles
+ALTER TABLE blogful_projects
   ADD COLUMN
-    style article_category;
+    style project_category;

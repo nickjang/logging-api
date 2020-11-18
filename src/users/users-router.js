@@ -1,107 +1,54 @@
-const path = require('path');
 const express = require('express');
-const xss = require('xss');
+const path = require('path');
 const UsersService = require('./users-service');
 
 const usersRouter = express.Router();
-const jsonParser = express.json();
-
-const serializeUser = user => ({
-  id: user.id,
-  fullname: xss(user.fullname),
-  username: xss(user.username),
-  nickname: xss(user.nickname),
-  date_created: user.date_created,
-});
+const jsonBodyParser = express.json();
 
 usersRouter
-  .route('/')
-  .get((req, res, next) => {
-    const knexInstance = req.app.get('db');
-    UsersService.getAllUsers(knexInstance)
-      .then(users => {
-        res.json(users.map(serializeUser));
-      })
-      .catch(next);
-  })
-  .post(jsonParser, (req, res, next) => {
-    const { fullname, username, nickname, password } = req.body;
-    const newUser = { fullname, username };
+  .post('/', jsonBodyParser, (req, res, next) => {
+    const { password, email, full_name, nickname } = req.body;
 
-    for (const [key, value] of Object.entries(newUser)) {
-      if (value == null) {
+    for (const field of ['full_name', 'email', 'password'])
+      if (!req.body[field])
         return res.status(400).json({
-          error: { message: `Missing '${key}' in request body` }
+          error: `Missing '${field}' in request body`
         });
-      }
-    }
+        
+    const passwordError = UsersService.validatePassword(password);
 
-    newUser.nickname = nickname;
-    newUser.password = password;
+    if (passwordError)
+      return res.status(400).json({ error: passwordError });
 
-    UsersService.insertUser(
+    UsersService.hasUserWithemail(
       req.app.get('db'),
-      newUser
+      email
     )
-      .then(user => {
-        res
-          .status(201)
-          .location(path.posix.join(req.originalUrl, `/${user.id}`))
-          .json(serializeUser(user));
-      })
-      .catch(next);
-  });
+      .then(hasUserWithemail => {
+        if (hasUserWithemail)
+          return res.status(400).json({ error: 'email already taken' });
 
-usersRouter
-  .route('/:user_id')
-  .all((req, res, next) => {
-    UsersService.getById(
-      req.app.get('db'),
-      req.params.user_id
-    )
-      .then(user => {
-        if (!user) {
-          return res.status(404).json({
-            error: { message: 'User doesn\'t exist' }
+        return UsersService.hashPassword(password)
+          .then(hashedPassword => {
+            const newUser = {
+              email,
+              password: hashedPassword,
+              full_name,
+              nickname,
+              date_created: 'now()',
+            };
+
+            return UsersService.insertUser(
+              req.app.get('db'),
+              newUser
+            )
+              .then(user => {
+                res
+                  .status(201)
+                  .location(path.posix.join(req.originalUrl, `/${user.id}`))
+                  .json(UsersService.serializeUser(user));
+              });
           });
-        }
-        res.user = user;
-        next();
-      })
-      .catch(next);
-  })
-  .get((req, res, next) => {
-    res.json(serializeUser(res.user));
-  })
-  .delete((req, res, next) => {
-    UsersService.deleteUser(
-      req.app.get('db'),
-      req.params.user_id
-    )
-      .then(numRowsAffected => {
-        res.status(204).end();
-      })
-      .catch(next);
-  })
-  .patch(jsonParser, (req, res, next) => {
-    const { fullname, username, password, nickname } = req.body;
-    const userToUpdate = { fullname, username, password, nickname };
-
-    const numberOfValues = Object.values(userToUpdate).filter(Boolean).length;
-    if (numberOfValues === 0)
-      return res.status(400).json({
-        error: {
-          message: 'Request body must contain either \'fullname\', \'username\', \'password\' or \'nickname\''
-        }
-      });
-
-    UsersService.updateUser(
-      req.app.get('db'),
-      req.params.user_id,
-      userToUpdate
-    )
-      .then(numRowsAffected => {
-        res.status(204).end();
       })
       .catch(next);
   });
