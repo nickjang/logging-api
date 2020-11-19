@@ -67,6 +67,36 @@ const ProjectsService = {
       .groupBy('logs.id', 'usr.id');
   },
 
+  getDaysWithLogs(db, project_id) {
+    return db
+      .from('logs')
+      .raw(
+        `SELECT 
+          DISTINCT date_trunc('day', logs.start) AS start,
+          MAX (date_trunc('day', logs.end)) AS end,
+          json_strip_nulls(
+            row_to_json(
+              (SELECT tmp FROM (
+                SELECT
+                  usr.id,
+                  usr.email,
+                  usr.full_name,
+                  usr.nickname,
+                  usr.date_created,
+                  usr.date_modified
+              ) tmp)
+            )
+          ) AS "user"`
+      )
+      .where('logs.project_id', project_id)
+      .leftJoin(
+        'users AS usr',
+        'logs.user_id',
+        'usr.id'
+      )
+      .orderBy('start', 'desc');
+  },
+
   serializeProject(project) {
     const { owner } = project;
     return {
@@ -82,25 +112,7 @@ const ProjectsService = {
         date_modified: new Date(owner.date_modified) || null
       }
     };
-  },
-
-  serializeProjectLog(log) {
-    const { user } = log;
-    return {
-      id: log.id,
-      project_id: log.project_id,
-      start: new Date(log.start),
-      stop: new Date(log.stop),
-      user: {
-        id: user.id,
-        email: user.email,
-        full_name: user.full_name,
-        nickname: user.nickname,
-        date_created: new Date(user.date_created),
-        date_modified: new Date(user.date_modified) || null
-      },
-    };
-  },
+  }
 };
 
 module.exports = ProjectsService;

@@ -105,6 +105,37 @@ const LogsService = {
         date_modified: new Date(user.date_modified) || null
       },
     };
+  },
+
+  /**
+  * Get the most recent day of two days.
+  */
+  mostRecentDay(day1, day2) {
+    if (day1 >= day2) return day1;
+    return day2;
+  },
+
+  /**
+   * Merge logs to ranges of days where there are logs
+   * @param {Array[]} logs - An array of logs containing two elements: a start Date and an end Date.
+   */
+  mergeLogs(logs) {
+    let dayRanges = [];
+    let idx1 = 0;
+    let idx2 = 0;
+
+    while (idx2 < logs.length) {
+      // compare end of first log to start of second
+      if (logs[idx1][1] < logs[idx2][0]) {
+        dayRanges.push(logs[idx1]);
+        idx1++;
+        idx2++;
+      } else {
+        logs[idx1][1] = this.mostRecentDay(logs[idx1][1], logs[idx2][1]);
+        idx2++;
+      }
+    }
+    return dayRanges;
   }
 };
 

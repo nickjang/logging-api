@@ -1,5 +1,6 @@
 const express = require('express');
 const ProjectsService = require('./projects-service');
+const LogsService = require('../logs/logs-service');
 const { requireAuth } = require('../middleware/jwt-auth');
 
 const projectsRouter = express.Router();
@@ -19,7 +20,20 @@ projectsRouter
   .all(requireAuth)
   .all(checkProjectExists)
   .get((req, res) => {
-    res.json(ProjectsService.serializeProject(res.project));
+    // return range of days with logs
+    if (req.params.part === 'day-ranges') {
+      ProjectsService.getDaysWithLogs(
+        req.app.get('db'),
+        req.params.project_id
+      )
+        .then(data => {
+          let logs = data.map(log => [new Date(log.start), new Date(log.end)]);
+          return res.json(LogsService.mergeLogs(logs));
+        })
+        .catch(next);
+    } else {
+      res.json(ProjectsService.serializeProject(res.project));
+    }
   });
 
 projectsRouter
@@ -27,14 +41,19 @@ projectsRouter
   .all(requireAuth)
   .all(checkProjectExists)
   .get((req, res, next) => {
-    ProjectsService.getLogsForProject(
-      req.app.get('db'),
-      req.params.project_id
-    )
-      .then(logs => {
-        res.json(logs.map(ProjectsService.serializeProjectLog));
-      })
-      .catch(next);
+    if (req.params.date) {
+
+    }
+    else {
+      ProjectsService.getLogsForProject(
+        req.app.get('db'),
+        req.params.project_id
+      )
+        .then(logs => {
+          res.json(logs.map(LogsService.serializeLog));
+        })
+        .catch(next);
+    }
   });
 
 async function checkProjectExists(req, res, next) {

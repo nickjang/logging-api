@@ -1,1 +1,1 @@
-DROP TABLE IF EXISTS blogful_projects;
+DROP TABLE IF EXISTS projects;
