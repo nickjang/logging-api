@@ -14,21 +14,21 @@ const LogsService = {
             row_to_json(
               (SELECT tmp FROM (
                 SELECT
-                  usr.id,
-                  usr.email,
-                  usr.full_name,
-                  usr.nickname,
-                  usr.date_created,
-                  usr.date_modified
+                  users.id,
+                  users.email,
+                  users.full_name,
+                  users.nickname,
+                  users.date_created,
+                  users.date_modified
               ) tmp)
             )
           ) AS "user"`
         )
       )
       .leftJoin(
-        'blogful_users AS usr',
+        'users',
         'logs.user_id',
-        'usr.id'
+        'users.id'
       )
       .where('logs.id', id)
       .first();
@@ -47,21 +47,21 @@ const LogsService = {
             row_to_json(
               (SELECT tmp FROM (
                 SELECT
-                  usr.id,
-                  usr.email,
-                  usr.full_name,
-                  usr.nickname,
-                  usr.date_created,
-                  usr.date_modified
+                  users.id,
+                  users.email,
+                  users.full_name,
+                  users.nickname,
+                  users.date_created,
+                  users.date_modified
               ) tmp)
             )
           ) AS "user"`
         )
       )
       .leftJoin(
-        'blogful_users AS usr',
+        'users',
         'logs.user_id',
-        'usr.id'
+        'users.id'
       )
       .where((projectBuilder) => {
         let projectId = null;

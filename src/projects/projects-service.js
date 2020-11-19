@@ -11,22 +11,27 @@ const ProjectsService = {
         db.raw(
           `json_strip_nulls(
             json_build_object(
-              'id', usr.id,
-              'email', usr.email,
-              'full_name', usr.full_name,
-              'nickname', usr.nickname,
-              'date_created', usr.date_created,
-              'date_modified', usr.date_modified
+              'id', users.id,
+              'email', users.email,
+              'full_name', users.full_name,
+              'nickname', users.nickname,
+              'date_created', users.date_created,
+              'date_modified', users.date_modified
             )
-          ) AS "author"`
+          ) AS "owner"`
         )
       )
       .leftJoin(
-        'users AS usr',
-        'projects.owner_id',
-        'usr.id'
+        'logs',
+        'projects.id',
+        'logs.project_id'
       )
-      .groupBy('projects.id', 'usr.id');
+      .leftJoin(
+        'users',
+        'projects.owner_id',
+        'users.id'
+      )
+      .groupBy('projects.id', 'users.id');
   },
 
   getById(db, id) {
@@ -47,12 +52,12 @@ const ProjectsService = {
             row_to_json(
               (SELECT tmp FROM (
                 SELECT
-                  usr.id,
-                  usr.email,
-                  usr.full_name,
-                  usr.nickname,
-                  usr.date_created,
-                  usr.date_modified
+                  users.id,
+                  users.email,
+                  users.full_name,
+                  users.nickname,
+                  users.date_created,
+                  users.date_modified
               ) tmp)
             )
           ) AS "user"`
@@ -60,11 +65,11 @@ const ProjectsService = {
       )
       .where('logs.project_id', project_id)
       .leftJoin(
-        'users AS usr',
+        'users',
         'logs.user_id',
-        'usr.id'
+        'users.id'
       )
-      .groupBy('logs.id', 'usr.id');
+      .groupBy('logs.id', 'users.id');
   },
 
   getDaysWithLogs(db, project_id) {
@@ -78,38 +83,39 @@ const ProjectsService = {
             row_to_json(
               (SELECT tmp FROM (
                 SELECT
-                  usr.id,
-                  usr.email,
-                  usr.full_name,
-                  usr.nickname,
-                  usr.date_created,
-                  usr.date_modified
+                  users.id,
+                  users.email,
+                  users.full_name,
+                  users.nickname,
+                  users.date_created,
+                  users.date_modified
               ) tmp)
             )
           ) AS "user"`
       )
       .where('logs.project_id', project_id)
       .leftJoin(
-        'users AS usr',
+        'users',
         'logs.user_id',
-        'usr.id'
+        'users.id'
       )
+      .groupBy('logs.id', 'users.id')
       .orderBy('start', 'desc');
   },
 
   serializeProject(project) {
-    const { owner } = project;
+    const { user } = project;
     return {
       id: project.id,
       title: xss(project.title),
       date_created: new Date(project.date_created),
-      owner: {
-        id: owner.id,
-        email: owner.email,
-        full_name: owner.full_name,
-        nickname: owner.nickname,
-        date_created: new Date(owner.date_created),
-        date_modified: new Date(owner.date_modified) || null
+      user: {
+        id: user.id,
+        email: user.email,
+        full_name: user.full_name,
+        nickname: user.nickname,
+        date_created: new Date(user.date_created),
+        date_modified: new Date(user.date_modified) || null
       }
     };
   }
