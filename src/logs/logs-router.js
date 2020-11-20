@@ -11,17 +11,67 @@ logsRouter
   .route('/')
   .all(requireAuth)
   .get(jsonBodyParser, (req, res, next) => {
+    // get logs within a range of dates
+    if (req.params.filter === 'dates') {
+      let { start, end } = req.body;
+      
+      if (start == null)
+        return res.status(404).json({
+          error: 'Missing \'start\' in request body'
+        });
+      if (end == null)
+        return res.status(404).json({
+          error: 'Missing \'end\' in request body'
+        });
+
+      try {
+        start = new Date(start).toISOString();
+        end = new Date(end).toISOString();
+      } catch (e) {
+        return res.status(404).json({
+          error: 'Given invalid ranges'
+        });
+      }
+
+      LogsService.getByDay(
+        req.app.get('db'),
+        start,
+        end
+      )
+        .then(logs => {
+          res.json(logs.map(LogsService.serializeLog));
+        })
+        .catch(next);
+    }
+
     // get logs filtered by project and date selectors
     if (req.params.filter === 'projects-and-dates') {
-      try {
-        validateSelectors(
-          req.app.get('db'),
-          req.body.selectors,
-          next
-        );
-      } catch (error) {
-        return res.status(404).json({ error });
-      }
+      // selectors is an object where keys are the projects' ids and 
+      // the values are the projects' list of day ranges
+      const { selectors } = req.body;
+
+      if (!selectors)
+        return res.status(404).json({
+          error: 'Missing \'selectors\' in request body'
+        });
+
+      // check if each project exists
+      Promise.all(
+        Object.keys(selectors).map(projectId =>
+          new Promise(() => ProjectsService.getById(
+            db,
+            projectId
+          ))
+        ))
+        .then(projects => {
+          let project;
+          for (project of projects)
+            if (!project)
+              return res.status(404).json({
+                error: 'One or more of the projects selected don\'t exist'
+              });
+        })
+        .catch(next);
 
       LogsService.getBySelectors(
         req.app.get('db'),
@@ -57,27 +107,5 @@ logsRouter
       })
       .catch(next);
   });
-
-function validateSelectors(db, selectors, next) {
-  // check if selectors given
-  if (!selectors) 
-    throw new Error('No selectors given.');
-
-  Promise.all(
-    Object.keys(selectors).map(projectId =>
-      new Promise(() => ProjectsService.getById(
-        db,
-        projectId
-      ))
-    ))
-    .then(projects => {
-      let project = null;
-      for (project of projects)
-        if (!project) 
-          throw new Error('One or more of the projects don\'t exist');
-    })
-    .catch(next);
-  return;
-}
 
 module.exports = logsRouter;

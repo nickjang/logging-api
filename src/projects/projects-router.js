@@ -4,36 +4,72 @@ const LogsService = require('../logs/logs-service');
 const { requireAuth } = require('../middleware/jwt-auth');
 
 const projectsRouter = express.Router();
+const jsonBodyParser = express.json();
 
 projectsRouter
   .route('/')
-  .get((req, res, next) => {
+  .all(requireAuth)
+  .all((req, res, next) => {
     ProjectsService.getAllProjects(req.app.get('db'))
       .then(projects => {
-        res.json(projects.map(ProjectsService.serializeProject));
+        res.projects = projects;
+        next();
       })
       .catch(next);
-  });
+  })
+  .get((req, res, next) => {
+    // return range of days with logs for each project
+    if (req.params.part === 'day-ranges') {
+      Promise.all(res.projects.map(project =>
+        ProjectsService.getDaysWithLogs(req.app.get('db'), project.id)
+      ))
+        .then(projects => {
+          let ranges = {};
+          projects.forEach(daysWithLogs => {
+            daysWithLogs = daysWithLogs.map(range =>
+              [new Date(range.start_day),
+              new Date(range.end_day)]
+            );
+            ranges[project.id] = ProjectsService.mergeRanges(daysWithLogs);
+          })
+          res.json(ranges);
+        })
+        .catch(next);
+    } else {
+      res.json(res.projects.map(ProjectsService.serializeProject));
+    }
+  })
+  .post(jsonBodyParser, (req, res, next) => {
+    const { title } = req.body;
+    const newProject = { title };
+
+    for (const [key, value] of Object.entries(newProject))
+      if (value == null)
+        return res.status(400).json({
+          error: `Missing '${key}' in request body`
+        });
+
+    newProject.owner_id = req.user.id;
+
+    ProjectsService.insertProject(
+      req.app.get('db'),
+      newProject
+    )
+      .then(project => {
+        res
+          .status(201)
+          .location(path.posix.join(req.originalUrl, `/${project.id}`))
+          .json(ProjectsService.serializeProject(project));
+      })
+      .catch(next);
+  });;
 
 projectsRouter
   .route('/:project_id')
   .all(requireAuth)
   .all(checkProjectExists)
   .get((req, res) => {
-    // return range of days with logs
-    if (req.params.part === 'day-ranges') {
-      ProjectsService.getDaysWithLogs(
-        req.app.get('db'),
-        req.params.project_id
-      )
-        .then(data => {
-          let logs = data.map(log => [new Date(log.start), new Date(log.end)]);
-          return res.json(LogsService.mergeLogs(logs));
-        })
-        .catch(next);
-    } else {
-      res.json(ProjectsService.serializeProject(res.project));
-    }
+    res.json(ProjectsService.serializeProject(res.project));
   });
 
 projectsRouter
@@ -41,19 +77,14 @@ projectsRouter
   .all(requireAuth)
   .all(checkProjectExists)
   .get((req, res, next) => {
-    if (req.params.date) {
-
-    }
-    else {
-      ProjectsService.getLogsForProject(
-        req.app.get('db'),
-        req.params.project_id
-      )
-        .then(logs => {
-          res.json(logs.map(LogsService.serializeLog));
-        })
-        .catch(next);
-    }
+    ProjectsService.getLogsForProject(
+      req.app.get('db'),
+      req.params.project_id
+    )
+      .then(logs => {
+        res.json(logs.map(LogsService.serializeLog));
+      })
+      .catch(next);
   });
 
 async function checkProjectExists(req, res, next) {

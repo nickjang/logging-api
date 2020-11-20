@@ -43,34 +43,26 @@ function makeProjectsArray(users) {
     {
       id: 1,
       title: 'First test post!',
-      style: 'How-to',
-      author_id: users[0].id,
+      owner_id: users[0].id,
       date_created: new Date('2029-01-22T16:28:32.615Z'),
-      content: 'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Natus consequuntur deserunt commodi, nobis qui inventore corrupti iusto aliquid debitis unde non.Adipisci, pariatur.Molestiae, libero esse hic adipisci autem neque ?',
     },
     {
       id: 2,
       title: 'Second test post!',
-      style: 'Interview',
-      author_id: users[1].id,
+      owner_id: users[1].id,
       date_created: new Date('2029-01-22T16:28:32.615Z'),
-      content: 'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Natus consequuntur deserunt commodi, nobis qui inventore corrupti iusto aliquid debitis unde non.Adipisci, pariatur.Molestiae, libero esse hic adipisci autem neque ?',
     },
     {
       id: 3,
       title: 'Third test post!',
-      style: 'News',
-      author_id: users[2].id,
+      owner_id: users[2].id,
       date_created: new Date('2029-01-22T16:28:32.615Z'),
-      content: 'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Natus consequuntur deserunt commodi, nobis qui inventore corrupti iusto aliquid debitis unde non.Adipisci, pariatur.Molestiae, libero esse hic adipisci autem neque ?',
     },
     {
       id: 4,
       title: 'Fourth test post!',
-      style: 'Listicle',
-      author_id: users[3].id,
+      owner_id: users[3].id,
       date_created: new Date('2029-01-22T16:28:32.615Z'),
-      content: 'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Natus consequuntur deserunt commodi, nobis qui inventore corrupti iusto aliquid debitis unde non.Adipisci, pariatur.Molestiae, libero esse hic adipisci autem neque ?',
     },
   ]
 }
@@ -79,78 +71,72 @@ function makeLogsArray(users, projects) {
   return [
     {
       id: 1,
-      text: 'First test log!',
       project_id: projects[0].id,
       user_id: users[0].id,
-      date_created: new Date('2029-01-22T16:28:32.615Z'),
+      start_time: new Date('2029-01-22T16:28:32.615Z'),
+      end_time: new Date('2029-01-22T17:28:32.615Z'),
     },
     {
       id: 2,
-      text: 'Second test log!',
       project_id: projects[0].id,
       user_id: users[1].id,
-      date_created: new Date('2029-01-22T16:28:32.615Z'),
+      start_time: new Date('2029-01-22T16:28:32.615Z'),
+      end_time: new Date('2029-01-22T17:28:32.615Z'),
     },
     {
       id: 3,
       text: 'Third test log!',
       project_id: projects[0].id,
       user_id: users[2].id,
-      date_created: new Date('2029-01-22T16:28:32.615Z'),
+      start_time: new Date('2029-01-22T16:28:32.615Z'),
+      end_time: new Date('2029-01-22T17:28:32.615Z'),
     },
     {
       id: 4,
-      text: 'Fourth test log!',
       project_id: projects[0].id,
       user_id: users[3].id,
-      date_created: new Date('2029-01-22T16:28:32.615Z'),
+      start_time: new Date('2029-01-22T16:28:32.615Z'),
+      end_time: new Date('2029-01-22T17:28:32.615Z'),
     },
     {
       id: 5,
-      text: 'Fifth test log!',
       project_id: projects[projects.length - 1].id,
       user_id: users[0].id,
-      date_created: new Date('2029-01-22T16:28:32.615Z'),
+      start_time: new Date('2029-01-22T16:28:32.615Z'),
+      end_time: new Date('2029-01-22T17:28:32.615Z'),
     },
     {
       id: 6,
-      text: 'Sixth test log!',
       project_id: projects[projects.length - 1].id,
       user_id: users[2].id,
-      date_created: new Date('2029-01-22T16:28:32.615Z'),
+      start_time: new Date('2029-01-22T16:28:32.615Z'),
+      end_time: new Date('2029-01-22T17:28:32.615Z'),
     },
     {
       id: 7,
-      text: 'Seventh test log!',
       project_id: projects[3].id,
       user_id: users[0].id,
-      date_created: new Date('2029-01-22T16:28:32.615Z'),
+      start_time: new Date('2029-01-22T16:28:32.615Z'),
+      end_time: new Date('2029-01-22T17:28:32.615Z'),
     },
   ];
 }
 
-function makeExpectedProject(users, project, logs=[]) {
-  const author = users
-    .find(user => user.id === project.author_id)
-
-  const number_of_logs = logs
-    .filter(log => log.project_id === project.id)
-    .length
+function makeExpectedProject(users, project, logs = []) {
+  const owner = users
+    .find(user => user.id === project.owner_id)
 
   return {
     id: project.id,
-    style: project.style,
     title: project.title,
-    content: project.content,
     date_created: project.date_created.toISOString(),
-    number_of_logs,
-    author: {
-      id: author.id,
-      email: author.email,
-      full_name: author.full_name,
-      nickname: author.nickname,
-      date_created: author.date_created.toISOString(),
-      date_modified: author.date_modified || null,
+    owner: {
+      id: owner.id,
+      email: owner.email,
+      full_name: owner.full_name,
+      nickname: owner.nickname,
+      date_created: owner.date_created.toISOString(),
+      date_modified: owner.date_modified || null,
     },
   }
 }
@@ -163,8 +149,8 @@ function makeExpectedProjectLogs(users, projectId, logs) {
     const logUser = users.find(user => user.id === log.user_id)
     return {
       id: log.id,
-      text: log.text,
-      date_created: log.date_created.toISOString(),
+      start_time: log.start_time.toISOString(),
+      end_time: log.end_time.toISOString(),
       user: {
         id: logUser.id,
         email: logUser.email,
@@ -180,16 +166,13 @@ function makeExpectedProjectLogs(users, projectId, logs) {
 function makeMaliciousProject(user) {
   const maliciousProject = {
     id: 911,
-    style: 'How-to',
     date_created: new Date(),
     title: 'Naughty naughty very naughty <script>alert("xss");</script>',
-    author_id: user.id,
-    content: `Bad image <img src="https://url.to.file.which/does-not.exist" onerror="alert(document.cookie);">. But not <strong>all</strong> bad.`,
+    owner_id: user.id,
   }
   const expectedProject = {
     ...makeExpectedProject([user], maliciousProject),
     title: 'Naughty naughty very naughty &lt;script&gt;alert(\"xss\");&lt;/script&gt;',
-    content: `Bad image <img src="https://url.to.file.which/does-not.exist">. But not <strong>all</strong> bad.`,
   }
   return {
     maliciousProject,
@@ -208,21 +191,21 @@ function cleanTables(db) {
   return db.transaction(trx =>
     trx.raw(
       `TRUNCATE
-        blogful_projects,
-        blogful_users,
-        blogful_logs
+        projects,
+        users,
+        logs
       `
     )
-    .then(() =>
-      Promise.all([
-        trx.raw(`ALTER SEQUENCE blogful_projects_id_seq minvalue 0 START WITH 1`),
-        trx.raw(`ALTER SEQUENCE blogful_users_id_seq minvalue 0 START WITH 1`),
-        trx.raw(`ALTER SEQUENCE blogful_logs_id_seq minvalue 0 START WITH 1`),
-        trx.raw(`SELECT setval('blogful_projects_id_seq', 0)`),
-        trx.raw(`SELECT setval('blogful_users_id_seq', 0)`),
-        trx.raw(`SELECT setval('blogful_logs_id_seq', 0)`),
-      ])
-    )
+      .then(() =>
+        Promise.all([
+          trx.raw(`ALTER SEQUENCE projects_id_seq minvalue 0 START WITH 1`),
+          trx.raw(`ALTER SEQUENCE users_id_seq minvalue 0 START WITH 1`),
+          trx.raw(`ALTER SEQUENCE logs_id_seq minvalue 0 START WITH 1`),
+          trx.raw(`SELECT setval('projects_id_seq', 0)`),
+          trx.raw(`SELECT setval('users_id_seq', 0)`),
+          trx.raw(`SELECT setval('logs_id_seq', 0)`),
+        ])
+      )
   )
 }
 
@@ -231,31 +214,31 @@ function seedUsers(db, users) {
     ...user,
     password: bcrypt.hashSync(user.password, 1)
   }))
-  return db.into('blogful_users').insert(preppedUsers)
+  return db.into('users').insert(preppedUsers)
     .then(() =>
       // update the auto sequence to stay in sync
       db.raw(
-        `SELECT setval('blogful_users_id_seq', ?)`,
+        `SELECT setval('users_id_seq', ?)`,
         [users[users.length - 1].id],
       )
     )
 }
 
-function seedProjectsTables(db, users, projects, logs=[]) {
+function seedProjectsTables(db, users, projects, logs = []) {
   // use a transaction to group the queries and auto rollback on any failure
   return db.transaction(async trx => {
     await seedUsers(trx, users)
-    await trx.into('blogful_projects').insert(projects)
+    await trx.into('projects').insert(projects)
     // update the auto sequence to match the forced id values
     await trx.raw(
-      `SELECT setval('blogful_projects_id_seq', ?)`,
+      `SELECT setval('projects_id_seq', ?)`,
       [projects[projects.length - 1].id],
     )
     // only insert logs if there are some, also update the sequence counter
     if (logs.length) {
-      await trx.into('blogful_logs').insert(logs)
+      await trx.into('logs').insert(logs)
       await trx.raw(
-        `SELECT setval('blogful_logs_id_seq', ?)`,
+        `SELECT setval('logs_id_seq', ?)`,
         [logs[logs.length - 1].id],
       )
     }
@@ -266,7 +249,7 @@ function seedMaliciousProject(db, user, project) {
   return seedUsers(db, [user])
     .then(() =>
       db
-        .into('blogful_projects')
+        .into('projects')
         .insert([project])
     )
 }

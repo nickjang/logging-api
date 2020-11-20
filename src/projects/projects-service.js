@@ -22,11 +22,6 @@ const ProjectsService = {
         )
       )
       .leftJoin(
-        'logs',
-        'projects.id',
-        'logs.project_id'
-      )
-      .leftJoin(
         'users',
         'projects.owner_id',
         'users.id'
@@ -45,8 +40,8 @@ const ProjectsService = {
       .from('logs')
       .select(
         'logs.id',
-        'logs.start',
-        'logs.stop',
+        'logs.start_time',
+        'logs.end_time',
         db.raw(
           `json_strip_nulls(
             row_to_json(
@@ -77,8 +72,8 @@ const ProjectsService = {
       .from('logs')
       .raw(
         `SELECT 
-          DISTINCT date_trunc('day', logs.start) AS start,
-          MAX (date_trunc('day', logs.end)) AS end,
+          DISTINCT date_trunc('day', logs.start_time) AS start_day,
+          MAX (date_trunc('day', logs.end_time)) AS end_day,
           json_strip_nulls(
             row_to_json(
               (SELECT tmp FROM (
@@ -99,8 +94,18 @@ const ProjectsService = {
         'logs.user_id',
         'users.id'
       )
-      .groupBy('logs.id', 'users.id')
-      .orderBy('start', 'desc');
+      .orderBy('start_day', 'desc');
+  },
+
+  insertProject(db, newProject) {
+    return db
+      .insert(newProject)
+      .into('projects')
+      .returning('*')
+      .then(([project]) => project)
+      .then(project =>
+        ProjectsService.getById(db, project.id)
+      );
   },
 
   serializeProject(project) {
@@ -118,6 +123,37 @@ const ProjectsService = {
         date_modified: new Date(user.date_modified) || null
       }
     };
+  },
+
+  /**
+ * Get the most recent day of two days.
+ */
+  mostRecentDay(day1, day2) {
+    if (day1 >= day2) return day1;
+    return day2;
+  },
+
+  /**
+   * Merge ranges to so they don't overlap.
+   * @param {Array[]} ranges - An array of ranges containing two elements: a start Date and an end Date.
+   */
+  mergeRanges(ranges) {
+    let dayRanges = [];
+    let idx1 = 0;
+    let idx2 = 0;
+
+    while (idx2 < ranges.length) {
+      // compare end of first log to start of second
+      if (ranges[idx1][1] < ranges[idx2][0]) {
+        dayRanges.push(ranges[idx1]);
+        idx1++;
+        idx2++;
+      } else {
+        ranges[idx1][1] = this.mostRecentDay(ranges[idx1][1], ranges[idx2][1]);
+        idx2++;
+      }
+    }
+    return dayRanges;
   }
 };
 
