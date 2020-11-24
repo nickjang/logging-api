@@ -1,7 +1,5 @@
-const xss = require('xss');
-
 const LogsService = {
-  getById(db, id) {
+  getById(db, user_id, id) {
     return db
       .from('logs')
       .select(
@@ -11,16 +9,13 @@ const LogsService = {
         'logs.project_id',
         db.raw(
           `json_strip_nulls(
-            row_to_json(
-              (SELECT tmp FROM (
-                SELECT
-                  users.id,
-                  users.email,
-                  users.full_name,
-                  users.nickname,
-                  users.date_created,
-                  users.date_modified
-              ) tmp)
+            json_build_object(
+              'id', users.id,
+              'email', users.email,
+              'full_name', users.full_name,
+              'nickname', users.nickname,
+              'date_created', users.date_created,
+              'date_modified', users.date_modified
             )
           ) AS "user"`
         )
@@ -30,10 +25,11 @@ const LogsService = {
         'logs.user_id',
         'users.id'
       )
-      .where('logs.id', id)
+      .where('log.user_id', user_id)
+      .andWhere('logs.id', id)
       .first();
   },
-  getByRange(db, start, end) {
+  getByRange(db, user_id, start, end) {
     return db
       .from('logs')
       .select(
@@ -43,16 +39,13 @@ const LogsService = {
         'logs.project_id',
         db.raw(
           `json_strip_nulls(
-            row_to_json(
-              (SELECT tmp FROM (
-                SELECT
-                  users.id,
-                  users.email,
-                  users.full_name,
-                  users.nickname,
-                  users.date_created,
-                  users.date_modified
-              ) tmp)
+            json_build_object(
+              'id', users.id,
+              'email', users.email,
+              'full_name', users.full_name,
+              'nickname', users.nickname,
+              'date_created', users.date_created,
+              'date_modified', users.date_modified
             )
           ) AS "user"`
         )
@@ -62,14 +55,10 @@ const LogsService = {
         'logs.user_id',
         'users.id'
       )
-      .where((builder) =>
-        builder
-          .where('logs.start_time', '>=', start)
-          .where('logs.start_time', '<', end)
-      )
-      .groupBy('logs.project_id', 'logs.id', 'users.id');
+      .whereBetween('logs.start_time', [start, end])
+      .andWhere('logs.user_id', user_id);
   },
-  getBySelectors(db, selectors) {
+  getBySelectors(db, user_id, selectors) {
     return db
       .from('logs')
       .select(
@@ -79,16 +68,13 @@ const LogsService = {
         'logs.project_id',
         db.raw(
           `json_strip_nulls(
-            row_to_json(
-              (SELECT tmp FROM (
-                SELECT
-                  users.id,
-                  users.email,
-                  users.full_name,
-                  users.nickname,
-                  users.date_created,
-                  users.date_modified
-              ) tmp)
+            json_build_object(
+              'id', users.id,
+              'email', users.email,
+              'full_name', users.full_name,
+              'nickname', users.nickname,
+              'date_created', users.date_created,
+              'date_modified', users.date_modified
             )
           ) AS "user"`
         )
@@ -98,30 +84,28 @@ const LogsService = {
         'logs.user_id',
         'users.id'
       )
-      .where((projectBuilder) => {
-        let projectId = null;
-        for (projectId in selectors) {
-          projectBuilder.orWhere((selectorBuilder) => {
+      .where('log.user_id', user_id)
+      .andWhere((projectBuilder) => {
+        for (let projectId in selectors) { // test with empty selectors object {}
+          projectBuilder.orWhere((selectorBuilder) => { //is starting with orWhere okay?
             selectorBuilder.where('logs.project_id', projectId);
 
-            let selector = null;
-            for (selector in selectors[projectId]) {
+            for (let selector of selectors[projectId]) {
               selectorBuilder.whereBetween('logs.start_time', selector);
             }
           });
         }
       })
-      .groupBy('logs.id', 'users.id')
       .orderBy('logs.start_time', 'desc');
   },
-  insertLog(db, newLog) {
+  insertLog(db, user_id, newLog) {
     return db
       .insert(newLog)
       .into('logs')
       .returning('*')
       .then(([log]) => log)
       .then(log =>
-        LogsService.getById(db, log.id)
+        LogsService.getById(db, user_id, log.id)
       );
   },
   serializeLog(log) {

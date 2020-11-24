@@ -1,7 +1,7 @@
 const xss = require('xss');
 
 const ProjectsService = {
-  getAllProjects(db) {
+  getAllProjects(db, user_id) {
     return db
       .from('projects')
       .select(
@@ -26,16 +26,16 @@ const ProjectsService = {
         'projects.owner_id',
         'users.id'
       )
-      .groupBy('projects.id', 'users.id');
+      .where('projects.owner_id', user_id);
   },
 
-  getById(db, id) {
-    return ProjectsService.getAllProjects(db)
-      .where('projects.id', id)
+  getById(db, user_id, id) {
+    return ProjectsService.getAllProjects(db, user_id)
+      .andWhere('projects.id', id)
       .first();
   },
 
-  getLogsForProject(db, project_id) {
+  getLogsForProject(db, user_id, project_id) {
     return db
       .from('logs')
       .select(
@@ -44,30 +44,27 @@ const ProjectsService = {
         'logs.end_time',
         db.raw(
           `json_strip_nulls(
-            row_to_json(
-              (SELECT tmp FROM (
-                SELECT
-                  users.id,
-                  users.email,
-                  users.full_name,
-                  users.nickname,
-                  users.date_created,
-                  users.date_modified
-              ) tmp)
+            json_build_object(
+              'id', users.id,
+              'email', users.email,
+              'full_name', users.full_name,
+              'nickname', users.nickname,
+              'date_created', users.date_created,
+              'date_modified', users.date_modified
             )
           ) AS "user"`
         )
       )
-      .where('logs.project_id', project_id)
       .leftJoin(
         'users',
         'logs.user_id',
         'users.id'
       )
-      .groupBy('logs.id', 'users.id');
+      .where('logs.project_id', project_id)
+      .andWhere('logs.user_id', user_id);
   },
 
-  getDaysWithLogs(db, project_id) {
+  getDaysWithLogs(db, user_id, project_id) {
     return db
       .from('logs')
       .raw(
@@ -75,52 +72,50 @@ const ProjectsService = {
           DISTINCT date_trunc('day', logs.start_time) AS start_day,
           MAX (date_trunc('day', logs.end_time)) AS end_day,
           json_strip_nulls(
-            row_to_json(
-              (SELECT tmp FROM (
-                SELECT
-                  users.id,
-                  users.email,
-                  users.full_name,
-                  users.nickname,
-                  users.date_created,
-                  users.date_modified
-              ) tmp)
+            json_build_object(
+              'id', users.id,
+              'email', users.email,
+              'full_name', users.full_name,
+              'nickname', users.nickname,
+              'date_created', users.date_created,
+              'date_modified', users.date_modified
             )
           ) AS "user"`
       )
-      .where('logs.project_id', project_id)
       .leftJoin(
         'users',
         'logs.user_id',
         'users.id'
       )
+      .where('logs.project_id', project_id)
+      .andWhere('logs.user_id', user_id)
+      .groupBy('logs.start_time', 'users.id')
       .orderBy('start_day', 'desc');
   },
 
-  insertProject(db, newProject) {
+  insertProject(db, user_id, newProject) {
     return db
       .insert(newProject)
       .into('projects')
       .returning('*')
-      .then(([project]) => project)
-      .then(project =>
-        ProjectsService.getById(db, project.id)
+      .then(([project]) => 
+        ProjectsService.getById(db, user_id, project.id)
       );
   },
 
   serializeProject(project) {
-    const { user } = project;
+    const { owner } = project;
     return {
       id: project.id,
       title: xss(project.title),
       date_created: new Date(project.date_created),
-      user: {
-        id: user.id,
-        email: user.email,
-        full_name: user.full_name,
-        nickname: user.nickname,
-        date_created: new Date(user.date_created),
-        date_modified: new Date(user.date_modified) || null
+      owner: {
+        id: owner.id,
+        email: owner.email,
+        full_name: owner.full_name,
+        nickname: owner.nickname,
+        date_created: new Date(owner.date_created),
+        date_modified: new Date(owner.date_modified) || null
       }
     };
   },

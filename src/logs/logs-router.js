@@ -10,18 +10,18 @@ const jsonBodyParser = express.json();
 logsRouter
   .route('/')
   .all(requireAuth)
-  .get(jsonBodyParser, (req, res, next) => {
+  .all(jsonBodyParser)
+  .get((req, res, next) => {
     // get logs within a range of dates
-    if (req.params.filter === 'dates') {
-      let { start, end } = req.body;
-      
-      if (start == null)
+    if (req.query.filter === 'range') {
+      let { start, end } = req.query;
+      if (!start)
         return res.status(404).json({
-          error: 'Missing \'start\' in request body'
+          error: 'Missing \'start\' in request params'
         });
-      if (end == null)
+      if (!end)
         return res.status(404).json({
-          error: 'Missing \'end\' in request body'
+          error: 'Missing \'end\' in request params'
         });
 
       try {
@@ -29,12 +29,13 @@ logsRouter
         end = new Date(end).toISOString();
       } catch (e) {
         return res.status(404).json({
-          error: 'Given invalid ranges'
+          error: 'Given invalid range value(s).'
         });
       }
 
-      LogsService.getByDay(
+      LogsService.getByRange(
         req.app.get('db'),
+        req.user.id,
         start,
         end
       )
@@ -45,27 +46,23 @@ logsRouter
     }
 
     // get logs filtered by project and date selectors
-    if (req.params.filter === 'projects-and-dates') {
+    if (req.query.filter === 'projects-and-ranges') {
       // selectors is an object where keys are the projects' ids and 
       // the values are the projects' list of day ranges
-      const { selectors } = req.body;
+      const selectors = req.query.selectors;
 
       if (!selectors)
         return res.status(404).json({
-          error: 'Missing \'selectors\' in request body'
+          error: 'Missing \'selectors\' in request params'
         });
 
       // check if each project exists
       Promise.all(
         Object.keys(selectors).map(projectId =>
-          new Promise(() => ProjectsService.getById(
-            db,
-            projectId
-          ))
+          ProjectsService.getById(db, projectId)
         ))
         .then(projects => {
-          let project;
-          for (project of projects)
+          for (let project of projects)
             if (!project)
               return res.status(404).json({
                 error: 'One or more of the projects selected don\'t exist'
@@ -75,7 +72,8 @@ logsRouter
 
       LogsService.getBySelectors(
         req.app.get('db'),
-        req.body.selectors
+        req.user.id,
+        selectors
       )
         .then(logs => {
           res.json(logs.map(LogsService.serializeLog));
@@ -83,7 +81,7 @@ logsRouter
         .catch(next);
     }
   })
-  .post(requireAuth, jsonBodyParser, (req, res, next) => {
+  .post((req, res, next) => {
     const { project_id, text } = req.body;
     const newLog = { project_id, text };
 
@@ -97,6 +95,7 @@ logsRouter
 
     LogsService.insertLog(
       req.app.get('db'),
+      req.user.id,
       newLog
     )
       .then(log => {
@@ -107,5 +106,7 @@ logsRouter
       })
       .catch(next);
   });
+
+//end_time: 'now()'
 
 module.exports = logsRouter;
