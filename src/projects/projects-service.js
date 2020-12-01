@@ -67,29 +67,13 @@ const ProjectsService = {
   getDaysWithLogs(db, user_id, project_id) {
     return db
       .from('logs')
-      .raw(
-        `SELECT 
-          DISTINCT date_trunc('day', logs.start_time) AS start_day,
-          MAX (date_trunc('day', logs.end_time)) AS end_day,
-          json_strip_nulls(
-            json_build_object(
-              'id', users.id,
-              'email', users.email,
-              'full_name', users.full_name,
-              'nickname', users.nickname,
-              'date_created', users.date_created,
-              'date_modified', users.date_modified
-            )
-          ) AS "user"`
-      )
-      .leftJoin(
-        'users',
-        'logs.user_id',
-        'users.id'
+      .select(
+        db.raw('DISTINCT date_trunc(\'day\', logs.start_time) AS start_day'),
+        db.raw('MAX (date_trunc(\'day\', logs.end_time)) AS end_day')
       )
       .where('logs.project_id', project_id)
       .andWhere('logs.user_id', user_id)
-      .groupBy('logs.start_time', 'users.id')
+      .groupBy('start_day')
       .orderBy('start_day', 'desc');
   },
 
@@ -98,7 +82,7 @@ const ProjectsService = {
       .insert(newProject)
       .into('projects')
       .returning('*')
-      .then(([project]) => 
+      .then(([project]) =>
         ProjectsService.getById(db, user_id, project.id)
       );
   },
@@ -115,7 +99,7 @@ const ProjectsService = {
         full_name: owner.full_name,
         nickname: owner.nickname,
         date_created: new Date(owner.date_created),
-        date_modified: new Date(owner.date_modified) || null
+        date_modified: owner.date_modified ? new Date(owner.date_modified) : null
       }
     };
   },

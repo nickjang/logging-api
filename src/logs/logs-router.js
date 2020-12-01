@@ -1,8 +1,8 @@
 const express = require('express');
 const path = require('path');
 const LogsService = require('./logs-service');
-const { requireAuth } = require('../middleware/jwt-auth');
 const ProjectsService = require('../projects/projects-service');
+const { requireAuth } = require('../middleware/jwt-auth');
 
 const logsRouter = express.Router();
 const jsonBodyParser = express.json();
@@ -17,16 +17,16 @@ logsRouter
       let { start, end } = req.query;
       if (!start)
         return res.status(404).json({
-          error: 'Missing \'start\' in request params'
+          error: 'Missing \'start\' in request query'
         });
       if (!end)
         return res.status(404).json({
-          error: 'Missing \'end\' in request params'
+          error: 'Missing \'end\' in request query'
         });
 
       try {
-        start = new Date(start).toISOString();
-        end = new Date(end).toISOString();
+        start = (new Date(start)).toISOString();
+        end = (new Date(end)).toISOString();
       } catch (e) {
         return res.status(404).json({
           error: 'Given invalid range value(s).'
@@ -53,7 +53,7 @@ logsRouter
 
       if (!selectors)
         return res.status(404).json({
-          error: 'Missing \'selectors\' in request params'
+          error: 'Missing \'selectors\' in request query'
         });
 
       // check if each project exists
@@ -82,8 +82,8 @@ logsRouter
     }
   })
   .post((req, res, next) => {
-    const { project_id, text } = req.body;
-    const newLog = { project_id, text };
+    const { project_id, start_time } = req.body;
+    const newLog = { project_id, start_time };
 
     for (const [key, value] of Object.entries(newLog))
       if (value == null)
@@ -91,9 +91,18 @@ logsRouter
           error: `Missing '${key}' in request body`
         });
 
+    // check if valid value
+    try {
+      newLog.start_time = (new Date(start_time)).toISOString();
+    } catch (e) {
+      return res.status(404).json({
+        error: 'Given invalid start time.'
+      });
+    }
+
     newLog.user_id = req.user.id;
 
-    LogsService.insertLog(
+    LogsService.insertProjectLog(
       req.app.get('db'),
       req.user.id,
       newLog
@@ -107,6 +116,60 @@ logsRouter
       .catch(next);
   });
 
-//end_time: 'now()'
+logsRouter
+  .route('/:log_id')
+  .all(requireAuth)
+  .all(checkLogExists)
+  .all(jsonBodyParser)
+  .patch((req, res, next) => {
+    let { end_time } = req.body;
+
+    if (!end_time)
+      return res.status(404).json({
+        error: 'Missing \'end_time\' in request body'
+      });
+
+    // check if valid value
+    try {
+      end_time = (new Date(end_time)).toISOString();
+    } catch (e) {
+      return res.status(404).json({
+        error: 'Given invalid end time.'
+      });
+    }
+
+    LogsService.endProjectLog(
+      req.app.get('db'),
+      req.user.id,
+      req.params.log_id,
+      end_time
+    )
+      .then(log => {
+        res
+          .status(200)
+          .location(path.posix.join(req.originalUrl, `/${log.id}`))
+          .json(LogsService.serializeLog(log));
+      })
+      .catch(next);
+  });
+
+async function checkLogExists(req, res, next) {
+  try {
+    const log = await LogsService.getById(
+      req.app.get('db'),
+      req.user.id,
+      req.params.log_id
+    );
+    if (!log)
+      return res.status(404).json({
+        error: 'Log doesn\'t exist'
+      });
+
+    res.log = log;
+    next();
+  } catch (error) {
+    next(error);
+  }
+}
 
 module.exports = logsRouter;

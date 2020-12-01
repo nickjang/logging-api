@@ -25,7 +25,7 @@ const LogsService = {
         'logs.user_id',
         'users.id'
       )
-      .where('log.user_id', user_id)
+      .where('logs.user_id', user_id)
       .andWhere('logs.id', id)
       .first();
   },
@@ -55,8 +55,11 @@ const LogsService = {
         'logs.user_id',
         'users.id'
       )
-      .whereBetween('logs.start_time', [start, end])
-      .andWhere('logs.user_id', user_id);
+      .where('logs.user_id', user_id)
+      .andWhere((builder) => {
+        builder.whereBetween('logs.start_time', [start, end]);
+        builder.orWhereBetween('logs.end_time', [start, end]);
+      });
   },
   getBySelectors(db, user_id, selectors) {
     return db
@@ -84,24 +87,38 @@ const LogsService = {
         'logs.user_id',
         'users.id'
       )
-      .where('log.user_id', user_id)
-      .andWhere((projectBuilder) => {
+      .where('logs.user_id', user_id)
+      .andWhere((builder) => {
         for (let projectId in selectors) { // test with empty selectors object {}
-          projectBuilder.orWhere((selectorBuilder) => { //is starting with orWhere okay?
-            selectorBuilder.where('logs.project_id', projectId);
-
-            for (let selector of selectors[projectId]) {
-              selectorBuilder.whereBetween('logs.start_time', selector);
-            }
+          builder.orWhere((projectBuilder) => { //is starting with orWhere okay?
+            projectBuilder.where('logs.project_id', projectId);
+            projectBuilder.andWhere((selectorBuilder) => {
+              for (let selector of selectors[projectId]) {
+                selectorBuilder.whereBetween('logs.start_time', selector);
+                selectorBuilder.orWhereBetween('logs.end_time', selector);
+              }
+            });
           });
         }
       })
       .orderBy('logs.start_time', 'desc');
   },
-  insertLog(db, user_id, newLog) {
+  insertProjectLog(db, user_id, newLog) {
     return db
       .insert(newLog)
       .into('logs')
+      .returning('*')
+      .then(([log]) => log)
+      .then(log =>
+        LogsService.getById(db, user_id, log.id)
+      );
+  },
+  endProjectLog(db, user_id, log_id, end_time) {
+    return db
+      .update({ end_time: end_time })
+      .from('logs')
+      .where('logs.user_id', user_id)
+      .andWhere('logs.id', log_id)
       .returning('*')
       .then(([log]) => log)
       .then(log =>
@@ -114,14 +131,14 @@ const LogsService = {
       id: log.id,
       project_id: log.project_id,
       start_time: new Date(log.start_time),
-      end_time: new Date(log.end_time) || null,
+      end_time: log.end_time ? new Date(log.end_time) : null,
       user: {
         id: user.id,
         email: user.email,
         full_name: user.full_name,
         nickname: user.nickname,
         date_created: new Date(user.date_created),
-        date_modified: new Date(user.date_modified) || null
+        date_modified: user.date_modified ? new Date(user.date_modified) : null
       },
     };
   }

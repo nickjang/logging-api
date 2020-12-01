@@ -22,17 +22,24 @@ projectsRouter
     // return range of days with logs for each project
     if (req.query.part === 'day-ranges') {
       Promise.all(res.projects.map(project =>
-        ProjectsService.getDaysWithLogs(req.app.get('db'), req.user.id, project.id)
+        ProjectsService.getDaysWithLogs(
+          req.app.get('db'),
+          req.user.id,
+          project.id
+        )
+          .then(result => {
+            return { project_id: project.id, ranges: result };
+          })
       ))
         .then(projects => {
           let ranges = {};
-          projects.forEach(daysWithLogs => {
-            daysWithLogs = daysWithLogs.map(range =>
-              [new Date(range.start_day),
-              new Date(range.end_day)]
+          projects.forEach(projectDayRanges => {
+            projectDayRanges.ranges = projectDayRanges.ranges.map(range =>
+              [new Date(range.start_day), new Date(range.end_day)]
             );
-            ranges[project.id] = ProjectsService.mergeRanges(daysWithLogs);
-          })
+            ranges[projectDayRanges.project_id] =
+              ProjectsService.mergeRanges(projectDayRanges.ranges);
+          });
           res.json(ranges);
         })
         .catch(next);
@@ -82,7 +89,7 @@ projectsRouter
     ProjectsService.getLogsForProject(
       req.app.get('db'),
       req.user.id,
-      req.query.project_id
+      req.params.project_id
     )
       .then(logs => {
         res.json(logs.map(LogsService.serializeLog));
@@ -95,7 +102,7 @@ async function checkProjectExists(req, res, next) {
     const project = await ProjectsService.getById(
       req.app.get('db'),
       req.user.id,
-      req.query.project_id
+      req.params.project_id
     );
 
     if (!project)
