@@ -21,29 +21,50 @@ projectsRouter
   .get((req, res, next) => {
     // return range of days with logs for each project
     if (req.query.part === 'day-ranges') {
+      const time_zone = req.query.time_zone;
+
+      if (!time_zone) {
+        return res.status(400).json({
+          error: 'Missing \'time_zone\' in request query'
+        });
+      } else {
+        // check if given valid time zone
+        try {
+          Intl.DateTimeFormat(undefined, { timeZone: time_zone });
+        } catch (e) {
+          return res.status(400).json({
+            error: 'Given invalid time zone'
+          });
+        }
+      }
+
+      // get all projects' days with logs
       Promise.all(res.projects.map(project =>
         ProjectsService.getDaysWithLogs(
           req.app.get('db'),
           req.user.id,
-          project.id
+          project.id,
+          time_zone
         )
           .then(result => {
             return { project_id: project.id, ranges: result };
           })
       ))
         .then(projects => {
+          // ranges is a dictionary of project ids to their lists of day ranges
           let ranges = {};
-          projects.forEach(projectDayRanges => {
-            projectDayRanges.ranges = projectDayRanges.ranges.map(range =>
+          projects.forEach(project => {
+            project.ranges = project.ranges.map(range => 
               [new Date(range.start_day), new Date(range.end_day)]
             );
-            ranges[projectDayRanges.project_id] =
-              ProjectsService.mergeRanges(projectDayRanges.ranges);
+            ranges[project.project_id] =
+              ProjectsService.mergeRanges(project.ranges);
           });
           res.json(ranges);
         })
         .catch(next);
     } else {
+      // return all projects
       res.json(res.projects.map(ProjectsService.serializeProject));
     }
   })

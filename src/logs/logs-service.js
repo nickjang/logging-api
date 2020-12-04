@@ -59,7 +59,8 @@ const LogsService = {
       .andWhere((builder) => {
         builder.whereBetween('logs.start_time', [start, end]);
         builder.orWhereBetween('logs.end_time', [start, end]);
-      });
+      })
+      .orderBy('logs.start_time', 'desc');
   },
   getBySelectors(db, user_id, selectors) {
     return db
@@ -89,11 +90,14 @@ const LogsService = {
       )
       .where('logs.user_id', user_id)
       .andWhere((builder) => {
-        for (let projectId in selectors) { // test with empty selectors object {}
+        for (const projectId in selectors) { // test with empty selectors object {}
           builder.orWhere((projectBuilder) => { //is starting with orWhere okay?
             projectBuilder.where('logs.project_id', projectId);
+            // if selecting all project logs, continue to next project
+            if (selectors[projectId][0] === 'project') return;
+
             projectBuilder.andWhere((selectorBuilder) => {
-              for (let selector of selectors[projectId]) {
+              for (const selector of selectors[projectId]) {
                 selectorBuilder.whereBetween('logs.start_time', selector);
                 selectorBuilder.orWhereBetween('logs.end_time', selector);
               }
@@ -101,7 +105,7 @@ const LogsService = {
           });
         }
       })
-      .orderBy('logs.start_time', 'desc');
+      .orderBy('logs.start_time');
   },
   insertProjectLog(db, user_id, newLog) {
     return db
@@ -141,6 +145,15 @@ const LogsService = {
         date_modified: user.date_modified ? new Date(user.date_modified) : null
       },
     };
+  },
+  formatStartEndTimes(start, end) {
+    start = (new Date(start)).toISOString();
+    end = new Date(end);
+
+    // end time is not inclusive
+    end.setHours(0, 0, 0, -1);
+    end = end.toISOString();
+    return [start, end];
   }
 };
 

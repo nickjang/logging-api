@@ -64,17 +64,28 @@ const ProjectsService = {
       .andWhere('logs.user_id', user_id);
   },
 
-  getDaysWithLogs(db, user_id, project_id) {
+  getDaysWithLogs(db, user_id, project_id, time_zone) {
     return db
       .from('logs')
       .select(
-        db.raw('DISTINCT date_trunc(\'day\', logs.start_time) AS start_day'),
-        db.raw('MAX (date_trunc(\'day\', logs.end_time)) AS end_day')
+        db.raw(`
+          DISTINCT (logs.start_time 
+                    AT TIME ZONE ?)::date 
+          AT TIME ZONE ? 
+          AS start_day`, [time_zone, time_zone]
+        ),
+        db.raw(`
+          MAX((logs.end_time 
+               AT TIME ZONE ? 
+               + INTERVAL '1 day'):: date) 
+          AT TIME ZONE ? 
+          AS end_day`, [time_zone, time_zone]
+        )
       )
       .where('logs.project_id', project_id)
       .andWhere('logs.user_id', user_id)
       .groupBy('start_day')
-      .orderBy('start_day', 'desc');
+      .orderBy('start_day');
   },
 
   insertProject(db, user_id, newProject) {
@@ -117,22 +128,29 @@ const ProjectsService = {
    * @param {Array[]} ranges - An array of ranges containing two elements: a start Date and an end Date.
    */
   mergeRanges(ranges) {
-    let dayRanges = [];
+    let mergedRanges = [];
     let idx1 = 0;
-    let idx2 = 0;
+    let idx2 = 1;
+
+    if (ranges.length === 1) return ranges;
 
     while (idx2 < ranges.length) {
       // compare end of first log to start of second
       if (ranges[idx1][1] < ranges[idx2][0]) {
-        dayRanges.push(ranges[idx1]);
-        idx1++;
+        mergedRanges.push(ranges[idx1]);
+        idx1 = idx2;
         idx2++;
       } else {
-        ranges[idx1][1] = this.mostRecentDay(ranges[idx1][1], ranges[idx2][1]);
+        ranges[idx1][1] =
+          this.mostRecentDay(ranges[idx1][1], ranges[idx2][1]);
         idx2++;
       }
+      // if the loop is ending, push the last range 
+      // or the range merged with last range
+      if (idx2 >= ranges.length)
+        mergedRanges.push(ranges[idx1]);
     }
-    return dayRanges;
+    return mergedRanges;
   }
 };
 

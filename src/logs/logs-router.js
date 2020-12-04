@@ -11,10 +11,11 @@ logsRouter
   .route('/')
   .all(requireAuth)
   .all(jsonBodyParser)
-  .get((req, res, next) => {
+  .get(async (req, res, next) => {
     // get logs within a range of dates
     if (req.query.filter === 'range') {
       let { start, end } = req.query;
+
       if (!start)
         return res.status(404).json({
           error: 'Missing \'start\' in request query'
@@ -24,9 +25,9 @@ logsRouter
           error: 'Missing \'end\' in request query'
         });
 
+      // check if start and end are valid, and make end not inclusive
       try {
-        start = (new Date(start)).toISOString();
-        end = (new Date(end)).toISOString();
+        [start, end] = LogsService.formatStartEndTimes(start, end);
       } catch (e) {
         return res.status(404).json({
           error: 'Given invalid range value(s).'
@@ -47,28 +48,45 @@ logsRouter
 
     // get logs filtered by project and date selectors
     if (req.query.filter === 'projects-and-ranges') {
-      // selectors is an object where keys are the projects' ids and 
-      // the values are the projects' list of day ranges
-      const selectors = req.query.selectors;
+      // selectors is a dictionary where keys are the projects'
+      // ids and the values are the projects' list of day ranges
+      let selectors = req.query.selectors;
 
-      if (!selectors)
+      // check if given selectors
+      if (!selectors) {
         return res.status(404).json({
           error: 'Missing \'selectors\' in request query'
         });
+      } else {
+        selectors = JSON.parse(selectors);
+        if (!Object.keys(selectors).length) {
+          return res.status(404).json({
+            error: 'Missing \'selectors\' in request query'
+          });
+        }
+      }
 
       // check if each project exists
-      Promise.all(
-        Object.keys(selectors).map(projectId =>
-          ProjectsService.getById(db, projectId)
-        ))
-        .then(projects => {
-          for (let project of projects)
-            if (!project)
-              return res.status(404).json({
-                error: 'One or more of the projects selected don\'t exist'
-              });
-        })
-        .catch(next);
+      const error = await checkIfProjectsExist(req, selectors);
+      if (error) {
+        if (error.error)
+          return res.status(404).json({ error: error.error });
+        else if (error.otherError)
+          throw new Error(error.otherError);
+      }
+
+      // format start and end times, and make end time not inclusive
+      try {
+        for (projectId in selectors) {
+          selectors[projectId] = selectors[projectId].map(selector =>
+            LogsService.formatStartEndTimes(selector[0], selector[1])
+          );
+        }
+      } catch (e) {
+        return res.status(404).json({
+          error: 'Given invalid selector value(s).'
+        });
+      }
 
       LogsService.getBySelectors(
         req.app.get('db'),
@@ -170,6 +188,25 @@ async function checkLogExists(req, res, next) {
   } catch (error) {
     next(error);
   }
+}
+
+function checkIfProjectsExist(req, selectors) {
+  return Promise.all(
+    Object.keys(selectors).map(projectId =>
+      ProjectsService.getById(req.app.get('db'), req.user.id, projectId)
+    ))
+    .then(projects => {
+      for (const project of projects)
+        if (!project)
+          throw new Error('Project doesn\'t exist');
+      return null;
+    })
+    .catch(e => {
+      if (e.message === 'Project doesn\'t exist')
+        return { error: 'One or more of the projects selected don\'t exist' };
+      else
+        return { otherError: e.message };
+    });
 }
 
 module.exports = logsRouter;
