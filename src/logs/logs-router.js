@@ -78,9 +78,10 @@ logsRouter
       // format start and end times, and make end time not inclusive
       try {
         for (projectId in selectors) {
-          selectors[projectId] = selectors[projectId].map(selector =>
-            LogsService.formatStartEndTimes(selector[0], selector[1])
-          );
+          selectors[projectId] = selectors[projectId].map(selector => {
+            if (selector === 'project') return 'project';
+            return LogsService.formatStartEndTimes(selector[0], selector[1]);
+          });
         }
       } catch (e) {
         return res.status(404).json({
