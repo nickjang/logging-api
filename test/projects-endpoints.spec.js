@@ -2,7 +2,7 @@ const knex = require('knex')
 const app = require('../src/app')
 const helpers = require('./test-helpers')
 
-describe('Projects Endpoints', function() {
+describe('Projects Endpoints', function () {
   let db
 
   const {
@@ -27,9 +27,14 @@ describe('Projects Endpoints', function() {
 
   describe(`GET /api/projects`, () => {
     context(`Given no projects`, () => {
+      beforeEach(() =>
+        helpers.seedUsers(db, testUsers)
+      )
+
       it(`responds with 200 and an empty list`, () => {
         return supertest(app)
           .get('/api/projects')
+          .set('Authorization', helpers.makeAuthHeader(testUsers[0]))
           .expect(200, [])
       })
     })
@@ -40,20 +45,23 @@ describe('Projects Endpoints', function() {
           db,
           testUsers,
           testProjects,
-          testLogs,
+          testLogs
         )
       )
 
       it('responds with 200 and all of the projects', () => {
-        const expectedProjects = testProjects.map(project =>
-          helpers.makeExpectedProject(
-            testUsers,
-            project,
-            testLogs,
+        const expectedProjects = testProjects
+          .filter(project => project.owner_id === testUsers[0].id)
+          .map(project =>
+            helpers.makeExpectedProject(
+              testUsers,
+              project,
+              testLogs
+            )
           )
-        )
         return supertest(app)
           .get('/api/projects')
+          .set('Authorization', helpers.makeAuthHeader(testUsers[0]))
           .expect(200, expectedProjects)
       })
     })
@@ -69,13 +77,14 @@ describe('Projects Endpoints', function() {
         return helpers.seedMaliciousProject(
           db,
           testUser,
-          maliciousProject,
+          maliciousProject
         )
       })
 
       it('removes XSS attack content', () => {
         return supertest(app)
           .get(`/api/projects`)
+          .set('Authorization', helpers.makeAuthHeader(testUsers[1]))
           .expect(200)
           .expect(res => {
             expect(res.body[0].title).to.eql(expectedProject.title)
@@ -120,7 +129,7 @@ describe('Projects Endpoints', function() {
 
         return supertest(app)
           .get(`/api/projects/${projectId}`)
-          .set('Authorization', helpers.makeAuthHeader(testUsers[0]))
+          .set('Authorization', helpers.makeAuthHeader(testUsers[1]))
           .expect(200, expectedProject)
       })
     })

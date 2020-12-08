@@ -4,25 +4,25 @@ function makeProjectsArray() {
       id: 1,
       date_created: '2029-01-22T16:28:32.615Z',
       title: 'First test post!',
-      author: 1
+      owner_id: 1
     },
     {
       id: 2,
       date_created: '2100-05-22T16:28:32.615Z',
       title: 'Second test post!',
-      author: 1
+      owner_id: 1
     },
     {
       id: 3,
       date_created: '1919-12-22T16:28:32.615Z',
       title: 'Third test post!',
-      author: 1
+      owner_id: 1
     },
     {
       id: 4,
       date_created: '1919-12-22T16:28:32.615Z',
       title: 'Fourth test post!',
-      author: 1
+      owner_id: 1
     },
   ];
 }
@@ -32,7 +32,7 @@ function makeMaliciousProject() {
     id: 911,
     date_created: new Date().toISOString(),
     title: 'Naughty naughty very naughty <script>alert("xss");</script>',
-    author: 1
+    owner_id: 1
   }
   const expectedProject = {
     ...maliciousProject,

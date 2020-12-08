@@ -71,8 +71,7 @@ const ProjectsService = {
         db.raw(`
           DISTINCT (logs.start_time 
                     AT TIME ZONE ?)::date 
-          AT TIME ZONE ? 
-          AS start_day`, [time_zone, time_zone]
+          AS start_day`, time_zone
         ),
         // get the most recent end day, including current day if log is still running
         db.raw(`
@@ -84,8 +83,7 @@ const ProjectsService = {
                  + INTERVAL '1 day'
                )::date
              )
-             AT TIME ZONE ? 
-             AS end_day`, [time_zone, time_zone]
+             AS end_day`, time_zone
         )
       )
       .where('logs.project_id', project_id)

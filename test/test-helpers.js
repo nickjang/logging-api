@@ -8,7 +8,7 @@ function makeUsersArray() {
       email: 'test-user-1',
       full_name: 'Test user 1',
       nickname: 'TU1',
-      password: 'password',
+      password: 'W!w1w1w1w1',
       date_created: new Date('2029-01-22T16:28:32.615Z'),
     },
     {
@@ -16,7 +16,7 @@ function makeUsersArray() {
       email: 'test-user-2',
       full_name: 'Test user 2',
       nickname: 'TU2',
-      password: 'password',
+      password: 'W!w1w1w1w1',
       date_created: new Date('2029-01-22T16:28:32.615Z'),
     },
     {
@@ -24,7 +24,7 @@ function makeUsersArray() {
       email: 'test-user-3',
       full_name: 'Test user 3',
       nickname: 'TU3',
-      password: 'password',
+      password: 'W!w1w1w1w1',
       date_created: new Date('2029-01-22T16:28:32.615Z'),
     },
     {
@@ -32,7 +32,7 @@ function makeUsersArray() {
       email: 'test-user-4',
       full_name: 'Test user 4',
       nickname: 'TU4',
-      password: 'password',
+      password: 'W!w1w1w1w1',
       date_created: new Date('2029-01-22T16:28:32.615Z'),
     },
   ]
@@ -75,54 +75,67 @@ function makeLogsArray(users, projects) {
       user_id: users[0].id,
       start_time: new Date('2029-01-22T16:28:32.615Z'),
       end_time: new Date('2029-01-22T17:28:32.615Z'),
+      format_min: null,
+      format_sec: null
     },
     {
       id: 2,
       project_id: projects[0].id,
-      user_id: users[1].id,
+      user_id: users[0].id,
       start_time: new Date('2029-01-22T16:28:32.615Z'),
       end_time: new Date('2029-01-22T17:28:32.615Z'),
+      format_min: 1,
+      format_sec: 1
     },
     {
       id: 3,
-      text: 'Third test log!',
       project_id: projects[0].id,
-      user_id: users[2].id,
+      user_id: users[0].id,
       start_time: new Date('2029-01-22T16:28:32.615Z'),
       end_time: new Date('2029-01-22T17:28:32.615Z'),
+      format_min: 1,
+      format_sec: 0
     },
     {
       id: 4,
       project_id: projects[0].id,
-      user_id: users[3].id,
+      user_id: users[0].id,
       start_time: new Date('2029-01-22T16:28:32.615Z'),
       end_time: new Date('2029-01-22T17:28:32.615Z'),
+      format_min: 0,
+      format_sec: 0
     },
     {
       id: 5,
       project_id: projects[projects.length - 1].id,
-      user_id: users[0].id,
+      user_id: users[3].id,
       start_time: new Date('2029-01-22T16:28:32.615Z'),
       end_time: new Date('2029-01-22T17:28:32.615Z'),
+      format_min: 10,
+      format_sec: 0
     },
     {
       id: 6,
       project_id: projects[projects.length - 1].id,
-      user_id: users[2].id,
+      user_id: users[3].id,
       start_time: new Date('2029-01-22T16:28:32.615Z'),
       end_time: new Date('2029-01-22T17:28:32.615Z'),
+      format_min: 5,
+      format_sec: 5
     },
     {
       id: 7,
       project_id: projects[3].id,
-      user_id: users[0].id,
+      user_id: users[3].id,
       start_time: new Date('2029-01-22T16:28:32.615Z'),
       end_time: new Date('2029-01-22T17:28:32.615Z'),
+      format_min: 45,
+      format_sec: 45
     },
   ];
 }
 
-function makeExpectedProject(users, project, logs = []) {
+function makeExpectedProject(users, project) {
   const owner = users
     .find(user => user.id === project.owner_id)
 
@@ -141,16 +154,21 @@ function makeExpectedProject(users, project, logs = []) {
   }
 }
 
-function makeExpectedProjectLogs(users, projectId, logs) {
+function makeExpectedProjectLogs(users, project_id, logs) {
   const expectedLogs = logs
-    .filter(log => log.project_id === projectId)
+    .filter(log => log.project_id === project_id)
 
   return expectedLogs.map(log => {
     const logUser = users.find(user => user.id === log.user_id)
     return {
       id: log.id,
+      project_id: log.project_id,
       start_time: log.start_time.toISOString(),
       end_time: log.end_time.toISOString(),
+      format: {
+        minutes: log.format_min,
+        seconds: log.format_sec
+      },
       user: {
         id: logUser.id,
         email: logUser.email,

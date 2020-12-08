@@ -107,10 +107,18 @@ const LogsService = {
             // if selecting all project logs, continue to next project
             if (selectors[projectId][0] === 'project') return;
 
-            projectBuilder.andWhere((selectorBuilder) => {
+            projectBuilder.andWhere((selectorsBuilder) => {
               for (const selector of selectors[projectId]) {
-                selectorBuilder.whereBetween('logs.start_time', selector);
-                selectorBuilder.orWhereBetween('logs.end_time', selector);
+                // get logs within the range
+                selectorsBuilder.where(logBuilder => {
+                  logBuilder.whereBetween('logs.start_time', selector);
+                  logBuilder.orWhereBetween('logs.end_time', selector);
+                });
+                // and get logs still running during the range
+                selectorsBuilder.orWhere(logBuilder => {
+                  logBuilder.where('logs.start_time', '<', selector[0]);
+                  logBuilder.andWhere('logs.end_time', null);
+                });
               }
             });
           });
