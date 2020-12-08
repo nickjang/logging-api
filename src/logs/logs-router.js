@@ -3,6 +3,7 @@ const path = require('path');
 const LogsService = require('./logs-service');
 const ProjectsService = require('../projects/projects-service');
 const { requireAuth } = require('../middleware/jwt-auth');
+const { types } = require('pg');
 
 const logsRouter = express.Router();
 const jsonBodyParser = express.json();
@@ -133,6 +134,32 @@ logsRouter
           .json(LogsService.serializeLog(log));
       })
       .catch(next);
+  })
+  .patch((req, res, next) => {
+    if (req.query.filter === 'ids' && req.query.part === 'format') {
+      let { ids, minutes, seconds } = req.body;
+
+      for (const [key, value] of Object.entries({ ids, minutes, seconds }))
+        if (value == null)
+          return res.status(400).json({
+            error: `Missing '${key}' in request body`
+          });
+
+      if (!(typeof ids === 'object') || !ids.length)
+        return res.status(400).json({
+          error: 'Missing id(s) in request body'
+        });
+
+      LogsService.updateFormat(
+        req.app.get('db'),
+        req.user.id,
+        ids,
+        minutes,
+        seconds
+      )
+        .then(logs => res.json(logs.map(LogsService.serializeLog)))
+        .catch(next);
+    }
   });
 
 logsRouter
@@ -141,35 +168,36 @@ logsRouter
   .all(checkLogExists)
   .all(jsonBodyParser)
   .patch((req, res, next) => {
-    let { end_time } = req.body;
+    if (req.query.part === 'end-time') {
+      let { end_time } = req.body;
 
-    if (!end_time)
-      return res.status(404).json({
-        error: 'Missing \'end_time\' in request body'
-      });
+      if (!end_time)
+        return res.status(404).json({
+          error: 'Missing \'end_time\' in request body'
+        });
 
-    // check if valid value
-    try {
-      end_time = (new Date(end_time)).toISOString();
-    } catch (e) {
-      return res.status(404).json({
-        error: 'Given invalid end time.'
-      });
+      // check if valid value
+      try {
+        end_time = (new Date(end_time)).toISOString();
+      } catch (e) {
+        return res.status(404).json({
+          error: 'Given invalid end time.'
+        });
+      }
+
+      LogsService.endProjectLog(
+        req.app.get('db'),
+        req.user.id,
+        req.params.log_id,
+        end_time
+      )
+        .then(log => {
+          res
+            .location(path.posix.join(req.originalUrl, `/${log.id}`))
+            .json(LogsService.serializeLog(log));
+        })
+        .catch(next);
     }
-
-    LogsService.endProjectLog(
-      req.app.get('db'),
-      req.user.id,
-      req.params.log_id,
-      end_time
-    )
-      .then(log => {
-        res
-          .status(200)
-          .location(path.posix.join(req.originalUrl, `/${log.id}`))
-          .json(LogsService.serializeLog(log));
-      })
-      .catch(next);
   });
 
 async function checkLogExists(req, res, next) {

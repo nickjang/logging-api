@@ -28,13 +28,11 @@ const ProjectsService = {
       )
       .where('projects.owner_id', user_id);
   },
-
   getById(db, user_id, id) {
     return ProjectsService.getAllProjects(db, user_id)
       .andWhere('projects.id', id)
       .first();
   },
-
   getLogsForProject(db, user_id, project_id) {
     return db
       .from('logs')
@@ -42,6 +40,9 @@ const ProjectsService = {
         'logs.id',
         'logs.start_time',
         'logs.end_time',
+        'logs.project_id',
+        'logs.format_min',
+        'logs.format_sec',
         db.raw(
           `json_strip_nulls(
             json_build_object(
@@ -63,7 +64,6 @@ const ProjectsService = {
       .where('logs.project_id', project_id)
       .andWhere('logs.user_id', user_id);
   },
-
   getDaysWithLogs(db, user_id, project_id, time_zone) {
     return db
       .from('logs')
@@ -74,12 +74,18 @@ const ProjectsService = {
           AT TIME ZONE ? 
           AS start_day`, [time_zone, time_zone]
         ),
+        // get the most recent end day, including current day if log is still running
         db.raw(`
-          MAX((logs.end_time 
-               AT TIME ZONE ? 
-               + INTERVAL '1 day'):: date) 
-          AT TIME ZONE ? 
-          AS end_day`, [time_zone, time_zone]
+          MAX(
+               ((CASE WHEN logs.end_time IS NULL THEN (now() AT TIME ZONE 'UTC')
+                      ELSE logs.end_time
+                 END) 
+                 AT TIME ZONE ? 
+                 + INTERVAL '1 day'
+               )::date
+             )
+             AT TIME ZONE ? 
+             AS end_day`, [time_zone, time_zone]
         )
       )
       .where('logs.project_id', project_id)
@@ -87,7 +93,6 @@ const ProjectsService = {
       .groupBy('start_day')
       .orderBy('start_day');
   },
-
   insertProject(db, user_id, newProject) {
     return db
       .insert(newProject)
@@ -97,7 +102,6 @@ const ProjectsService = {
         ProjectsService.getById(db, user_id, project.id)
       );
   },
-
   serializeProject(project) {
     const { owner } = project;
     return {
