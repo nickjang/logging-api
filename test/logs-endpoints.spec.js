@@ -33,12 +33,12 @@ describe('Logs Endpoints', function() {
       )
     );
 
-    it.only('creates a log, responding with 201 and the new log', function() {
+    it('creates a log, responding with 201 and the new log', function() {
       this.retries(3);
       const testProject = testProjects[0];
       const testUser = testUsers[0];
       const newLog = {
-        start_time : (new Date()).toISOString()
+        start_time : new Date().toLocaleString('en', { timeZone: 'UTC' }),
         project_id: testProject.id,
       };
       return supertest(app)
@@ -51,22 +51,22 @@ describe('Logs Endpoints', function() {
           expect(res.body.project_id).to.eql(newLog.project_id);
           expect(res.body.user.id).to.eql(testUser.id);
           expect(res.headers.location).to.eql(`/api/logs/${res.body.id}`);
-          const expectedDate = new Date().toLocaleString('en', { timeZone: 'UTC' });
-          const actualDate = new Date(res.body.date_created).toLocaleString();
-          expect(actualDate).to.eql(expectedDate);
+          const expectedTime = new Date().toLocaleString('en', { timeZone: 'UTC' });
+          const actualTime = new Date(res.body.start_time).toLocaleString();
+          expect(actualTime).to.eql(expectedTime);
         })
         .expect(res =>
           db
-            .from('blogful_logs')
+            .from('logs')
             .select('*')
             .where({ id: res.body.id })
             .first()
             .then(row => {
               expect(row.project_id).to.eql(newLog.project_id);
               expect(row.user_id).to.eql(testUser.id);
-              const expectedDate = new Date().toLocaleString('en', { timeZone: 'UTC' });
-              const actualDate = new Date(row.date_created).toLocaleString();
-              expect(actualDate).to.eql(expectedDate);
+              const expectedTime = new Date().toLocaleString('en', { timeZone: 'UTC' });
+              const actualTime = new Date(res.body.start_time).toLocaleString();
+              expect(actualTime).to.eql(expectedTime);
             })
         );
     });

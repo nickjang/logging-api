@@ -151,7 +151,7 @@ describe('Users Endpoints', function() {
           })
           .expect(res =>
             db
-              .from('blogful_users')
+              .from('users')
               .select('*')
               .where({ id: res.body.id })
               .first()
