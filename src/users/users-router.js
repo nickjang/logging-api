@@ -59,6 +59,9 @@ usersRouter
   .route('/')
   .all(requireAuth)
   .patch(jsonBodyParser, async (req, res, next) => {
+    if (req.user.id === 1)
+      res.status(401).json({ error: 'Cannot update demo account' });
+
     const { password, email } = req.body;
     let updates = { date_modified: 'now()' };
 
@@ -107,6 +110,9 @@ usersRouter
       .catch(next);
   })
   .delete((req, res, next) => {
+    if (req.user.id === 1)
+      res.status(401).json({ error: 'Cannot delete demo account' });
+
     return UsersService.deleteUser(
       req.app.get('db'),
       req.user.id

@@ -118,8 +118,8 @@ const ProjectsService = {
   },
 
   /**
- * Get the most recent day of two days.
- */
+   * Get the most recent day of two days.
+   */
   mostRecentDay(day1, day2) {
     if (day1 >= day2) return day1;
     return day2;
