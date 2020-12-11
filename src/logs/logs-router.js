@@ -89,7 +89,6 @@ logsRouter
           error: 'Given invalid selector value(s).'
         });
       }
-      return res.json(selectors);
       LogsService.getBySelectors(
         req.app.get('db'),
         req.user.id,

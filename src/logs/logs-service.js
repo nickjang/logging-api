@@ -187,7 +187,12 @@ const LogsService = {
     end = new Date(end);
 
     // end time is not inclusive
-    end.setHours(0, 0, 0, -1);
+    end.setHours(
+      end.getHours(),
+      end.getMinutes(),
+      end.getSeconds(),
+      end.getMilliseconds() - 1
+    );
     end = end.toISOString();
     return [start, end];
   }
