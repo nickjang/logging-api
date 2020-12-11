@@ -56,6 +56,7 @@ const UsersService = {
       email: xss(user.email),
       nickname: xss(user.nick_name),
       date_created: new Date(user.date_created),
+      date_modified: user.date_modified ? new Date(user.date_modified) : null
     };
   },
 };

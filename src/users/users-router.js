@@ -2,14 +2,13 @@ const express = require('express');
 const path = require('path');
 const { requireAuth } = require('../middleware/jwt-auth');
 const UsersService = require('./users-service');
+const AuthService = require('../auth/auth-service');
 
 const usersRouter = express.Router();
 const jsonBodyParser = express.json();
 
 usersRouter
-  .route('/')
-  .all(jsonBodyParser)
-  .post((req, res, next) => {
+  .post('/', jsonBodyParser, (req, res, next) => {
     const { password, email, full_name, nickname } = req.body;
 
     for (const field of ['full_name', 'email', 'password'])
@@ -55,8 +54,11 @@ usersRouter
       })
       .catch(next);
   })
+
+usersRouter
+  .route('/')
   .all(requireAuth)
-  .patch(async (req, res, next) => {
+  .patch(jsonBodyParser, async (req, res, next) => {
     const { password, email } = req.body;
     let updates = { date_modified: 'now()' };
 
@@ -71,7 +73,7 @@ usersRouter
         email
       );
 
-      if (hasUserWithemail)
+      if (hasUserWithEmail)
         return res.status(400).json({ error: 'Email already taken' });
       else
         updates['email'] = email;
@@ -93,10 +95,14 @@ usersRouter
       updates
     )
       .then(user => {
+        const sub = user.email;
+        const payload = { user_id: user.id };
         res
-          .status(204)
           .location(path.posix.join(req.originalUrl, `/${user.id}`))
-          .json(UsersService.serializeUser(user));
+          .json({
+            user: UsersService.serializeUser(user),
+            authToken: AuthService.createJwt(sub, payload)
+          });
       })
       .catch(next);
   })
