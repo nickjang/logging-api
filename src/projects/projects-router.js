@@ -54,7 +54,7 @@ projectsRouter
           // ranges is a dictionary of project ids to their lists of day ranges
           let ranges = {};
           projects.forEach(project => {
-            project.ranges = project.ranges.map(range => 
+            project.ranges = project.ranges.map(range =>
               [new Date(range.start_day), new Date(range.end_day)]
             );
             ranges[project.project_id] =
@@ -69,6 +69,11 @@ projectsRouter
     }
   })
   .post(jsonBodyParser, (req, res, next) => {
+    if (req.user.id === 1)
+      res.status(401).json({
+        error: 'Cannot create projects with demo account.'
+      });
+
     const { title } = req.body;
     const newProject = { title };
 
