@@ -70,7 +70,7 @@ projectsRouter
   })
   .post(jsonBodyParser, (req, res, next) => {
     if (req.user.id === 1)
-      res.status(401).json({
+      return res.status(401).json({
         error: 'Cannot create projects with demo account.'
       });
 
