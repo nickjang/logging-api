@@ -59,7 +59,7 @@ Base URL: `https://tranquil-chamber-25203.herokuapp.com/api`
 	- POST
 		- `/projects`
 			- Create a new project, given a project title.
-- `/users` Enpoint
+- `/users` Endpoint
 	- POST 
 		- `/users`
 			- Create a new user, given an email, password, and name.
