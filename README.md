@@ -90,5 +90,5 @@ Thank you to [Thinkful](https://thinkful.com/), where this capstone was complete
 
 ## Links
 
-* [The logging application][site]
+* [The Logger application][site]
 * [Logger's server GitHub page](https://github.com/nickjang/logging-api)
