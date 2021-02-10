@@ -1,6 +1,6 @@
 # Logger
 
-An application for logging start and stop times. Organize logs into projects and view past logs. Logs are shown in you're time zone (but they are stored in UTC).
+An application for logging start and stop times. Organize logs into projects and view past logs. Logs are shown in your time zone (but they are stored in UTC).
 
 This application was written using React, Node.js, and PostgreSQL.
 
@@ -59,7 +59,7 @@ Base URL: `https://tranquil-chamber-25203.herokuapp.com/api`
 	- POST
 		- `/projects`
 			- Create a new project, given a project title.
-- `/users` Enpoint
+- `/users` Endpoint
 	- POST 
 		- `/users`
 			- Create a new user, given an email, password, and name.
